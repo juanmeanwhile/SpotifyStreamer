@@ -6,4 +6,5 @@
     <dimen name="artist_item_margin">8dp</dimen>
     <dimen name="list_item_inner_margin">4dp</dimen>
     <dimen name="list_item_text_size">18dp</dimen>
+    <dimen name="list_item_album_size">16dp</dimen>
 </resources>

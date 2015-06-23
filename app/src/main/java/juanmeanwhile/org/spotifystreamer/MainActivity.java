@@ -1,8 +1,6 @@
 package juanmeanwhile.org.spotifystreamer;
 
-import android.graphics.Canvas;
 import android.os.AsyncTask;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -39,7 +37,6 @@ public class MainActivity extends AppCompatActivity {
 
     protected SpotifyApi mApi;
     protected SpotifyService mSpotify;
-    private ArtistsPager mResults;
     private SearchArtistTask mSearchTask;
 
     private ArtistAdapter mAdapter;
@@ -87,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         mEmptyHint.setVisibility(View.GONE);
     }
 
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -119,14 +117,25 @@ public class MainActivity extends AppCompatActivity {
 
     private void setResults(ArtistsPager artistPager) {
         //show empty hint in case there is no returned results
-        mEmptyHint.setVisibility((artistPager == null || artistPager.artists.items.size() == 0)?View.VISIBLE:View.GONE);
+        if ((artistPager == null || artistPager.artists.items.size() == 0)) {
+            mEmptyHint.setVisibility(View.VISIBLE);
+        } else {
+            mEmptyHint.setVisibility(View.GONE);
 
-        mAdapter = new ArtistAdapter(artistPager.artists.items);
-        mRecyclerView.setAdapter(mAdapter);
+            mAdapter = new ArtistAdapter(artistPager.artists.items);
+            mRecyclerView.setAdapter(mAdapter);
+        }
     }
 
     public class ArtistAdapter extends RecyclerView.Adapter<ViewHolder> {
         private List<Artist> mDataset;
+
+        private View.OnClickListener mListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(ArtistActivity.newIntent(MainActivity.this, ((Artist) view.getTag())));
+            }
+        };
 
         // Provide a suitable constructor (depends on the kind of dataset)
         public ArtistAdapter(List<Artist> artist) {
@@ -136,12 +145,14 @@ public class MainActivity extends AppCompatActivity {
         // Create new views (invoked by the layout manager)
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent,
-                                                       int viewType) {
+                                             int viewType) {
             // create a new view
             View v = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.list_item_artist, parent, false);
 
+            v.setOnClickListener(mListener);
             ViewHolder vh = new ViewHolder(v);
+
             return vh;
         }
 
@@ -149,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             Artist artist = mDataset.get(position);
+            holder.itemView.setTag(artist);
             holder.mName.setText(artist.name);
             if (artist.images.size() > 0)
                 Picasso.with(MainActivity.this).load(artist.images.get(0).url).into(holder.mPic);
@@ -166,6 +178,7 @@ public class MainActivity extends AppCompatActivity {
     public static class ViewHolder extends RecyclerView.ViewHolder {
         public TextView mName;
         public ImageView mPic;
+
         public ViewHolder(View v) {
             super(v);
             mName = (TextView) v.findViewById(R.id.name);

@@ -5,4 +5,7 @@
     <string name="action_settings">Settings</string>
     <string name="search_artist_hint">artist name</string>
     <string name="no_artist_found">Sorry, no artists found</string>
+    <string name="title_activity_artist">ArtistActivity</string>
+    <string name="artist_tracks_getting">Getting tracks</string>
+    <string name="artist_activity_title">Top 10 tracks</string>
 </resources>
