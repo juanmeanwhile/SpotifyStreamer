@@ -1,0 +1,217 @@
+package juanmeanwhile.org.spotifystreamer;
+
+import android.content.Context;
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import kaaes.spotify.webapi.android.SpotifyApi;
+import kaaes.spotify.webapi.android.SpotifyService;
+import kaaes.spotify.webapi.android.models.Artist;
+import kaaes.spotify.webapi.android.models.Track;
+import kaaes.spotify.webapi.android.models.Tracks;
+
+
+public class ArtistActivity extends AppCompatActivity {
+
+    private static final String TAG = "ArtistActivity";
+    private static final String ARG_ARTIST_ID = "artistId";
+    private static final String ARG_ARTIST_NAME = "artistName";
+
+    private static final String COUNTRY = "SE";
+
+    private String mArtistId;
+    private String mArtistName;
+    private RecyclerView mRecyclerView;
+    private TextView mEmptyHint;
+    private TrackAdapter mAdapter;
+
+    protected SpotifyApi mApi;
+    protected SpotifyService mSpotify;
+    private GetArtistTracksTask mGetTask;
+
+    public static Intent newIntent(Context context, Artist artist) {
+        Intent intent = new Intent(context, ArtistActivity.class);
+
+        Bundle bundle = new Bundle();
+        bundle.putString(ARG_ARTIST_ID, artist.id);
+        bundle.putString(ARG_ARTIST_NAME, artist.name);
+
+        intent.putExtras(bundle);
+        return intent;
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_artist);
+
+        //read args
+        mArtistId = getIntent().getStringExtra(ARG_ARTIST_ID);
+        mArtistName = getIntent().getStringExtra(ARG_ARTIST_NAME);
+
+        android.support.v7.app.ActionBar actionBar = getSupportActionBar();
+        actionBar.setTitle(R.string.artist_activity_title);
+        actionBar.setSubtitle(mArtistName);
+        actionBar.setDisplayHomeAsUpEnabled(true);
+
+        //Init spotify API
+        mApi = new SpotifyApi();
+        mSpotify = mApi.getService();
+
+        mRecyclerView = (RecyclerView) findViewById(R.id.song_list);
+        mRecyclerView.setHasFixedSize(true);
+        mRecyclerView.addItemDecoration(new DividerItemDecoration(this, R.drawable.list_divider));
+
+        // use a linear layout manager
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        mRecyclerView.setLayoutManager(layoutManager);
+
+        // specify an adapter (see also next example)
+        mEmptyHint = (TextView) findViewById(R.id.empty_hint);
+        mEmptyHint.setVisibility(View.VISIBLE);
+
+        searchTracks(mArtistId);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_artist, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void searchTracks(String artistId) {
+        mEmptyHint.setText(R.string.artist_tracks_getting);
+
+        if (mGetTask != null)
+            mGetTask.cancel(true);
+
+        mGetTask = new GetArtistTracksTask();
+        mGetTask.execute(mArtistId, COUNTRY);
+    }
+
+    private void setResults(Tracks tracks) {
+        if ((tracks == null || tracks.tracks.size() == 0)) {
+            //show empty hint in case there is no returned results
+            mEmptyHint.setVisibility(View.VISIBLE);
+        } else {
+            mEmptyHint.setVisibility(View.GONE);
+            mAdapter = new TrackAdapter(tracks.tracks);
+            mRecyclerView.setAdapter(mAdapter);
+        }
+    }
+
+    public class TrackAdapter extends RecyclerView.Adapter<ViewHolder> {
+        private List<Track> mDataset;
+
+        // Provide a suitable constructor (depends on the kind of dataset)
+        public TrackAdapter(List<Track> tracks) {
+            mDataset = tracks;
+        }
+
+        // Create new views (invoked by the layout manager)
+        @Override
+        public ViewHolder onCreateViewHolder(ViewGroup parent,
+                                             int viewType) {
+            // create a new view
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.list_item_track, parent, false);
+
+            ViewHolder vh = new ViewHolder(v);
+            return vh;
+        }
+
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int position) {
+            Track track = mDataset.get(position);
+            holder.mName.setText(track.name);
+            holder.mAlbum.setText(track.album.name);
+            if (track.album.images.size() > 0)
+                Picasso.with(ArtistActivity.this).load(track.album.images.get(0).url).placeholder(R.drawable.placeholder).into(holder.mPic);
+        }
+
+        @Override
+        public int getItemCount() {
+            return mDataset.size();
+        }
+    }
+
+    /**
+     * Provides data model for each artist item
+     */
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        public TextView mName;
+        public TextView mAlbum;
+        public ImageView mPic;
+
+        public ViewHolder(View v) {
+            super(v);
+            mName = (TextView) v.findViewById(R.id.name);
+            mAlbum = (TextView) v.findViewById(R.id.album);
+            mPic = (ImageView) v.findViewById(R.id.pic);
+        }
+    }
+
+    private class GetArtistTracksTask extends AsyncTask<String, Void, Tracks> {
+
+        String error;
+
+        @Override
+        protected Tracks doInBackground(String... strings) {
+            Log.d(TAG, "Searching for artistId: " + strings[0]);
+
+            Map<String, Object> paramMap = new HashMap<String, Object>();
+            paramMap.put("country", strings[1]);
+            try {
+                return mSpotify.getArtistTopTrack(strings[0], paramMap);
+            } catch (Exception e) {
+                error = e.getMessage();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Tracks tracksPager) {
+            if (tracksPager == null) {
+                mEmptyHint.setText(error);
+                return;
+            }
+
+            Log.d(TAG, "Success");
+            setResults(tracksPager);
+        }
+    }
+}
