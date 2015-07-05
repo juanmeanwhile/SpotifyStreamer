@@ -15,18 +15,27 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
+import kaaes.spotify.webapi.android.models.Album;
 import kaaes.spotify.webapi.android.models.Artist;
+import kaaes.spotify.webapi.android.models.Image;
 import kaaes.spotify.webapi.android.models.Track;
 import kaaes.spotify.webapi.android.models.Tracks;
+import retrofit.Callback;
+import retrofit.RetrofitError;
+import retrofit.android.MainThreadExecutor;
+import retrofit.client.Response;
 
 
 public class ArtistActivity extends AppCompatActivity {
@@ -34,6 +43,10 @@ public class ArtistActivity extends AppCompatActivity {
     private static final String TAG = "ArtistActivity";
     private static final String ARG_ARTIST_ID = "artistId";
     private static final String ARG_ARTIST_NAME = "artistName";
+
+    private static final String SAVED_NAMES = "saved_names";
+    private static final String SAVED_IMGS = "saved_imgs";
+    private static final String SAVED_ALBUMS = "saved_albums";
 
     private static final String COUNTRY = "SE";
 
@@ -45,7 +58,8 @@ public class ArtistActivity extends AppCompatActivity {
 
     protected SpotifyApi mApi;
     protected SpotifyService mSpotify;
-    private GetArtistTracksTask mGetTask;
+    private ArrayList<Track> mTrackList;
+    private String mCurrentSearch = "";
 
     public static Intent newIntent(Context context, Artist artist) {
         Intent intent = new Intent(context, ArtistActivity.class);
@@ -73,7 +87,7 @@ public class ArtistActivity extends AppCompatActivity {
         actionBar.setDisplayHomeAsUpEnabled(true);
 
         //Init spotify API
-        mApi = new SpotifyApi();
+        mApi = new SpotifyApi(Executors.newSingleThreadExecutor(), new MainThreadExecutor());
         mSpotify = mApi.getService();
 
         mRecyclerView = (RecyclerView) findViewById(R.id.song_list);
@@ -116,22 +130,92 @@ public class ArtistActivity extends AppCompatActivity {
     private void searchTracks(String artistId) {
         mEmptyHint.setText(R.string.artist_tracks_getting);
 
-        if (mGetTask != null)
-            mGetTask.cancel(true);
+        Map<String, Object> paramMap = new HashMap<String, Object>();
+        paramMap.put("country", COUNTRY);
 
-        mGetTask = new GetArtistTracksTask();
-        mGetTask.execute(mArtistId, COUNTRY);
+        mSpotify.getArtistTopTrack(artistId, paramMap, new Callback<Tracks>() {
+            @Override
+            public void success(Tracks tracks, Response response) {
+                setResults(tracks.tracks);
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+                Toast.makeText(getApplicationContext(), R.string.error_default, Toast.LENGTH_SHORT).show();
+                mEmptyHint.setText(R.string.get_tracks_error);
+                mEmptyHint.setVisibility(View.VISIBLE);
+                mRecyclerView.setVisibility(View.GONE);
+            }
+        });
     }
 
-    private void setResults(Tracks tracks) {
-        if ((tracks == null || tracks.tracks.size() == 0)) {
+    private void setResults(List<Track> tracks) {
+        if ((tracks == null || tracks.size() == 0)) {
             //show empty hint in case there is no returned results
             mEmptyHint.setVisibility(View.VISIBLE);
+            mRecyclerView.setVisibility(View.GONE);
         } else {
             mEmptyHint.setVisibility(View.GONE);
-            mAdapter = new TrackAdapter(tracks.tracks);
+            mRecyclerView.setVisibility(View.VISIBLE);
+            mAdapter = new TrackAdapter(tracks);
             mRecyclerView.setAdapter(mAdapter);
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState (Bundle outState){
+        super.onSaveInstanceState(outState);
+
+        if (mTrackList == null)
+            return;
+
+        //save name, id and image url as it is the only we need
+        ArrayList<String> names = new ArrayList<String>();
+        ArrayList<String> imgs = new ArrayList<String>();
+        ArrayList<String> albums = new ArrayList<String>();
+
+        for (Track track : mTrackList) {
+            names.add(track.name);
+            imgs.add(track.album.images.size()>0?track.album.images.get(0).url:null);
+            albums.add(track.album.name);
+        }
+
+        outState.putStringArrayList(SAVED_NAMES, names);
+        outState.putStringArrayList(SAVED_IMGS, imgs);
+        outState.putStringArrayList(SAVED_ALBUMS, albums);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        ArrayList<String> names = savedInstanceState.getStringArrayList(SAVED_NAMES);
+        ArrayList<String> imgs = savedInstanceState.getStringArrayList(SAVED_IMGS);
+        ArrayList<String> albums = savedInstanceState.getStringArrayList(SAVED_ALBUMS);
+
+        if (names == null)
+            return;
+
+        mTrackList = new ArrayList<Track>();
+        for (int i = 0; i < names.size(); i++) {
+            Track track = new Track();
+            track.name = names.get(i);
+
+            //Album
+            Album album = new Album();
+            album.name = albums.get(0);
+
+            //image
+            album.images = new ArrayList<Image>();
+            if (imgs.get(i) != null) {
+                Image image = new Image();
+                image.url = imgs.get(i);
+                album.images.add(image);
+            }
+            track.album = album;
+
+            mTrackList.add(track);
+        }
+
+        setResults(mTrackList);
     }
 
     public class TrackAdapter extends RecyclerView.Adapter<ViewHolder> {
@@ -185,33 +269,4 @@ public class ArtistActivity extends AppCompatActivity {
         }
     }
 
-    private class GetArtistTracksTask extends AsyncTask<String, Void, Tracks> {
-
-        String error;
-
-        @Override
-        protected Tracks doInBackground(String... strings) {
-            Log.d(TAG, "Searching for artistId: " + strings[0]);
-
-            Map<String, Object> paramMap = new HashMap<String, Object>();
-            paramMap.put("country", strings[1]);
-            try {
-                return mSpotify.getArtistTopTrack(strings[0], paramMap);
-            } catch (Exception e) {
-                error = e.getMessage();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Tracks tracksPager) {
-            if (tracksPager == null) {
-                mEmptyHint.setText(error);
-                return;
-            }
-
-            Log.d(TAG, "Success");
-            setResults(tracksPager);
-        }
-    }
 }

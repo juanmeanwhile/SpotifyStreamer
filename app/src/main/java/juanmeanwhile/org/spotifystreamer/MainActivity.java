@@ -1,13 +1,11 @@
 package juanmeanwhile.org.spotifystreamer;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,20 +14,32 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Artist;
 import kaaes.spotify.webapi.android.models.ArtistsPager;
+import kaaes.spotify.webapi.android.models.Image;
+import retrofit.Callback;
+import retrofit.RetrofitError;
+import retrofit.android.MainThreadExecutor;
+import retrofit.client.Response;
 
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
+    private static final String SAVED_NAMES = "saved_names";
+    private static final String SAVED_IMGS = "saved_imgs";
+    private static final String SAVED_IDS = "saved_ids";
+    private static final String SAVED_SEARCH = "saved_search";
 
     private RecyclerView mRecyclerView;
     private TextView mEmptyHint;
@@ -37,9 +47,10 @@ public class MainActivity extends AppCompatActivity {
 
     protected SpotifyApi mApi;
     protected SpotifyService mSpotify;
-    private SearchArtistTask mSearchTask;
 
     private ArtistAdapter mAdapter;
+    private List<Artist> mArtistList;
+    private String mCurrentSearch = "";
 
 
     @Override
@@ -48,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         //Init spotify API
-        mApi = new SpotifyApi();
+        mApi = new SpotifyApi(Executors.newSingleThreadExecutor(), new MainThreadExecutor());
         mSpotify = mApi.getService();
 
         mSearchField = (EditText) findViewById(R.id.search_field);
@@ -60,9 +71,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if (charSequence.length() > 3) {
+                if (charSequence.length() > 0)
                     searchArtist(charSequence.toString());
-                }
             }
 
             @Override
@@ -84,6 +94,61 @@ public class MainActivity extends AppCompatActivity {
         mEmptyHint.setVisibility(View.GONE);
     }
 
+    @Override
+    protected void onSaveInstanceState (Bundle outState){
+        super.onSaveInstanceState(outState);
+
+        if (mArtistList == null)
+            return;
+
+        //save name, id and image url as it is the only we need
+        ArrayList<String> names = new ArrayList<String>();
+        ArrayList<String> imgs = new ArrayList<String>();
+        ArrayList<String> ids = new ArrayList<String>();
+
+        for (Artist artist : mArtistList) {
+            names.add(artist.name);
+            imgs.add(artist.images.size()>0?artist.images.get(0).url:null);
+            ids.add(artist.id);
+        }
+
+        outState.putStringArrayList(SAVED_NAMES, names);
+        outState.putStringArrayList(SAVED_IMGS, imgs);
+        outState.putStringArrayList(SAVED_IDS, ids);
+        outState.putString(SAVED_SEARCH, mCurrentSearch);
+
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        mCurrentSearch = savedInstanceState.getString(SAVED_SEARCH);
+        ArrayList<String> names = savedInstanceState.getStringArrayList(SAVED_NAMES);
+        ArrayList<String> imgs = savedInstanceState.getStringArrayList(SAVED_IMGS);
+        ArrayList<String> ids = savedInstanceState.getStringArrayList(SAVED_IDS);
+
+        if (names == null)
+            return;
+
+        mArtistList = new ArrayList<Artist>();
+        for (int i = 0; i < names.size(); i++) {
+            Artist artist = new Artist();
+            artist.id = ids.get(i);
+            artist.name = names.get(i);
+
+            //image
+            artist.images = new ArrayList<Image>();
+            if (imgs.get(i) != null) {
+                Image image = new Image();
+                image.url = imgs.get(i);
+                artist.images.add(image);
+            }
+
+            mArtistList.add(artist);
+        }
+
+        mSearchField.setText(mCurrentSearch);
+        setResults(mArtistList);
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -108,21 +173,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void searchArtist(String artist) {
-        if (mSearchTask != null)
-            mSearchTask.cancel(true);
+        mCurrentSearch = artist;
 
-        mSearchTask = new SearchArtistTask();
-        mSearchTask.execute(artist);
+        mSpotify.searchArtists(artist, new Callback<ArtistsPager>() {
+            @Override
+            public void success(ArtistsPager artistsPager, Response response) {
+                setResults(artistsPager.artists.items);
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+                Toast.makeText(getApplicationContext(), R.string.error_default, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void setResults(ArtistsPager artistPager) {
+    private void setResults(List<Artist> artists) {
+        mArtistList = artists;
+
         //show empty hint in case there is no returned results
-        if ((artistPager == null || artistPager.artists.items.size() == 0)) {
+        if (artists.size() == 0) {
+
+            Toast.makeText(MainActivity.this, R.string.artist_search_error_not_found, Toast.LENGTH_SHORT).show();
             mEmptyHint.setVisibility(View.VISIBLE);
+            mRecyclerView.setVisibility(View.GONE);
         } else {
             mEmptyHint.setVisibility(View.GONE);
+            mRecyclerView.setVisibility(View.VISIBLE);
 
-            mAdapter = new ArtistAdapter(artistPager.artists.items);
+            mAdapter = new ArtistAdapter(artists);
             mRecyclerView.setAdapter(mAdapter);
         }
     }
@@ -185,20 +264,4 @@ public class MainActivity extends AppCompatActivity {
             mPic = (ImageView) v.findViewById(R.id.pic);
         }
     }
-
-    private class SearchArtistTask extends AsyncTask<String, Void, ArtistsPager> {
-
-        @Override
-        protected ArtistsPager doInBackground(String... strings) {
-            Log.d(TAG, "Searching for artist: " + strings[0]);
-            return mSpotify.searchArtists(strings[0]);
-        }
-
-        @Override
-        protected void onPostExecute(ArtistsPager artistsPager) {
-            Log.d(TAG, "Success");
-            setResults(artistsPager);
-        }
-    }
-
 }
