@@ -11,4 +11,7 @@
     <string name="artist_search_error_not_found">Artist not found! Please refine the search</string>
     <string name="error_default">Could not search, please try again</string>
     <string name="get_tracks_error">Could not get tracks</string>
+
+<!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
