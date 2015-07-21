@@ -20,7 +20,15 @@
         </activity>
         <activity
             android:name=".ArtistActivity"
-            android:label="@string/title_activity_artist">
+            android:label="@string/title_activity_artist" >
+        </activity>
+        <activity
+            android:name=".PlayerActivity"
+            android:label="@string/title_activity_player"
+            android:parentActivityName=".ArtistActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="ArtistActivity" />
         </activity>
     </application>
 

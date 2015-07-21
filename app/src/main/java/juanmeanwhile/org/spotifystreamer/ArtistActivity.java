@@ -2,6 +2,7 @@ package juanmeanwhile.org.spotifystreamer;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
@@ -11,7 +12,7 @@ import juanmeanwhile.org.spotifystreamer.fragment.ArtistFragment;
 import kaaes.spotify.webapi.android.models.Artist;
 
 
-public class ArtistActivity extends AppCompatActivity {
+public class ArtistActivity extends AppCompatActivity implements ArtistFragment.OnFragmentInteractionListener{
 
     private static final String TAG = "ArtistActivity";
     private static final String ARG_ARTIST_ID = "artistId";
@@ -76,4 +77,8 @@ public class ArtistActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onFragmentInteraction(Uri uri) {
+        
+    }
 }

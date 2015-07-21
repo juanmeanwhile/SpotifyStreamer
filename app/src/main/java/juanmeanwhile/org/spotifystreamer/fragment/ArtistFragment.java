@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 
 import juanmeanwhile.org.spotifystreamer.DividerItemDecoration;
+import juanmeanwhile.org.spotifystreamer.PlayerActivity;
 import juanmeanwhile.org.spotifystreamer.R;
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
@@ -245,6 +246,13 @@ public class ArtistFragment extends Fragment {
     public class TrackAdapter extends RecyclerView.Adapter<ViewHolder> {
         private List<Track> mDataset;
 
+        private View.OnClickListener onClickListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(PlayerActivity.newIntent(getActivity(), (Track)view.getTag()));
+            }
+        };
+
         // Provide a suitable constructor (depends on the kind of dataset)
         public TrackAdapter(List<Track> tracks) {
             mDataset = tracks;
@@ -258,6 +266,7 @@ public class ArtistFragment extends Fragment {
             View v = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.list_item_track, parent, false);
 
+            v.setOnClickListener(onClickListener);
             ViewHolder vh = new ViewHolder(v);
             return vh;
         }
@@ -265,6 +274,7 @@ public class ArtistFragment extends Fragment {
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             Track track = mDataset.get(position);
+            holder.itemView.setTag(track);
             holder.mName.setText(track.name);
             holder.mAlbum.setText(track.album.name);
             if (track.album.images.size() > 0)
