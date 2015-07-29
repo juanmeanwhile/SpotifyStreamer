@@ -1,94 +1,141 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-              android:orientation="vertical"
-                android:paddingLeft="@dimen/activity_horizontal_margin"
-                android:paddingRight="@dimen/activity_horizontal_margin"
-                android:paddingTop="@dimen/activity_vertical_margin"
-                android:paddingBottom="@dimen/activity_vertical_margin"
-                tools:context="juanmeanwhile.org.spotifystreamer.PlayerActivityFragment">
+                tools:context="juanmeanwhile.org.spotifystreamer.fragment.PlayerFragment">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/player_container"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Justin Timberlake"
-        android:id="@+id/artist"
-        android:layout_gravity="center_horizontal"/>
+        android:layout_alignParentBottom="true"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:background="@color/secondary_bk">
+        <ImageButton
+            android:layout_width="@dimen/player_small_button_side"
+            android:layout_height="@dimen/player_small_button_side"
+            android:id="@+id/prev_button"
+            android:scaleType="center"
+            android:src="@android:drawable/ic_media_previous"
+            android:background="@drawable/player_button"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Sex and Magic"
-        android:id="@+id/album"
-        android:layout_gravity="center_horizontal"/>
+        <ImageButton
+            android:layout_width="@dimen/player_button_side"
+            android:layout_height="@dimen/player_button_side"
+            android:id="@+id/play_button"
+            android:scaleType="center"
+            android:src="@android:drawable/ic_media_play"
+            android:background="@drawable/player_button"/>
 
-    <ImageView
-        android:layout_width="@dimen/player_image_side"
-        android:layout_height="@dimen/player_image_side"
-        android:id="@+id/pic"
-        android:layout_gravity="center_horizontal"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Senyorita"
-        android:id="@+id/title"
-        android:layout_gravity="center_horizontal"/>
+        <ImageButton
+            android:layout_width="@dimen/player_small_button_side"
+            android:layout_height="@dimen/player_small_button_side"
+            android:id="@+id/next_button"
+            android:scaleType="center"
+            android:src="@android:drawable/ic_media_next"
+            android:background="@drawable/player_button"/>
+    </LinearLayout>
 
     <RelativeLayout
+        android:id="@+id/progress_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <ProgressBar
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/progress_bar"
-            android:layout_gravity="center_horizontal"/>
-
+        android:layout_height="wrap_content"
+        android:padding="6dp"
+        android:layout_above="@id/player_container"
+        android:background="@color/secondary_bk">
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="@dimen/player_time_width"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:layout_below="@id/progress_bar"
+            android:gravity="center"
             android:textAppearance="?android:attr/textAppearanceMedium"
             android:text="0:00"
+            android:textSize="16sp"
+            android:textColor="#fff"
+            android:fontFamily="sans-serif-bold"
             android:id="@+id/current_time"
             android:layout_gravity="center_horizontal"/>
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="@dimen/player_time_width"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
-            android:layout_below="@id/bar"
+            android:gravity="center"
             android:textAppearance="?android:attr/textAppearanceMedium"
             android:text="3:45"
+            android:textSize="16sp"
+            android:textColor="#fff"
+            android:fontFamily="sans-serif-bold"
             android:id="@+id/end_time"
             android:layout_gravity="center_horizontal"/>
+
+        <ProgressBar
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toLeftOf="@id/end_time"
+            android:layout_toRightOf="@id/current_time"
+            android:layout_margin="6dp"
+            android:id="@+id/progress_bar"
+            android:layout_gravity="center_horizontal"/>
+
     </RelativeLayout>
 
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/info_container"
+        android:id="@+id/pic"
+        android:layout_margin="10dp"
+        android:layout_gravity="center_horizontal"/>
     <LinearLayout
-        android:orientation="horizontal"
+        android:id="@+id/info_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:gravity="center_horizontal">
-        <ImageButton
-            android:layout_width="@dimen/player_button_side"
-            android:layout_height="@dimen/player_button_side"
-            android:id="@+id/prev_button"/>
+        android:layout_above="@id/progress_container"
+        android:padding="6dp"
+        android:orientation="vertical">
 
-        <ImageButton
-            android:layout_width="@dimen/player_button_side"
-            android:layout_height="@dimen/player_button_side"
-            android:id="@+id/play_button"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Senyorita"
+            android:textSize="18dp"
+            android:id="@+id/title"
+            android:fontFamily="sans-serif-light"
+            android:layout_gravity="center_horizontal"/>
 
-        <ImageButton
-            android:layout_width="@dimen/player_button_side"
-            android:layout_height="@dimen/player_button_side"
-            android:id="@+id/next_button"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Justin Timberlake"
+            android:textSize="16dp"
+            android:id="@+id/artist"
+            android:fontFamily="sans-serif-bold"
+            android:layout_gravity="center_horizontal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Sex and Magic"
+            android:textSize="16dp"
+            android:id="@+id/album"
+            android:fontFamily="sans-serif-light"
+            android:layout_gravity="center_horizontal"/>
+
+
+
+
+
     </LinearLayout>
-</LinearLayout>
+
+
+
+
+
+</RelativeLayout>

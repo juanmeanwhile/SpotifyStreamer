@@ -2,41 +2,35 @@ package juanmeanwhile.org.spotifystreamer;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import kaaes.spotify.webapi.android.models.ArtistSimple;
+import juanmeanwhile.org.spotifystreamer.data.ParcelableTrack;
+import juanmeanwhile.org.spotifystreamer.fragment.PlayerFragment;
 import kaaes.spotify.webapi.android.models.Track;
 
 
 public class PlayerActivity extends ActionBarActivity {
 
-    private static final String ARG_TRACK_ID= "track_id";
-    private static final String ARG_TRACK_NAME = "track_name";
-    private static final String ARG_ARTIST_NAME = "artist_name";
-    private static final String ARG_ALBUM_NAME = "album_name";
-    private static final String ARG_TRACK_IMG = "img";
+    private static final String ARG_TRACK= "track";
+    private static final String ARG_TRACK_LIST = "tracks";
 
-    public static Intent newIntent(Context context, Track track){
+    public static Intent newIntent(Context context, Track track, List<Track> topTenTracks){
         Intent intent = new Intent(context, PlayerActivity.class);
 
         Bundle args = new Bundle();
-        args.putString(ARG_TRACK_ID, track.id);
-        args.putString(ARG_TRACK_NAME, track.name);
-        args.putString(ARG_ALBUM_NAME, track.album.name);
+        args.putParcelable(ARG_TRACK, new ParcelableTrack(track));
 
-        ArrayList<String> artists = new ArrayList<String>();
-        for (ArtistSimple artist : track.artists)
-            artists.add(artist.name);
-
-        args.putStringArrayList(ARG_ARTIST_NAME, artists);
-
-        if (track.album.images.size() > 0)
-            args.putString(ARG_TRACK_IMG, track.album.images.get(0).url);
+        ArrayList<String> topTen = new ArrayList<String>();
+        for (Track t : topTenTracks) {
+            topTen.add(t.id);
+        }
+        intent.putExtra(ARG_TRACK_LIST, topTen);
 
         intent.putExtras(args);
 
@@ -48,11 +42,12 @@ public class PlayerActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
 
+        ArrayList<String> topTenTracksId = getIntent().getStringArrayListExtra(ARG_TRACK_LIST);
+
         //TODO launch dialog or load fragment according if we are on tablet or not
         if (savedInstanceState == null) {
             Bundle extras = getIntent().getExtras();
-            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, PlayerActivityFragment.newInstance(extras.getString(ARG_TRACK_ID),
-                    extras.getString(ARG_TRACK_NAME), extras.getString(ARG_ARTIST_NAME), extras.getString(ARG_ALBUM_NAME), extras.getString(ARG_TRACK_IMG))).commit();
+            getSupportFragmentManager().beginTransaction().add(R.id.fragment_container, PlayerFragment.newInstance((ParcelableTrack)extras.getParcelable(ARG_TRACK), topTenTracksId)).commit();
         }
     }
 

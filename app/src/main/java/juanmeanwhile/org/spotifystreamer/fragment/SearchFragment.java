@@ -20,18 +20,14 @@ import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
 
 import juanmeanwhile.org.spotifystreamer.DividerItemDecoration;
 import juanmeanwhile.org.spotifystreamer.R;
-import kaaes.spotify.webapi.android.SpotifyApi;
-import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Artist;
 import kaaes.spotify.webapi.android.models.ArtistsPager;
 import kaaes.spotify.webapi.android.models.Image;
 import retrofit.Callback;
 import retrofit.RetrofitError;
-import retrofit.android.MainThreadExecutor;
 import retrofit.client.Response;
 
 
@@ -40,7 +36,7 @@ import retrofit.client.Response;
  * Use the {@link SearchFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class SearchFragment extends Fragment {
+public class SearchFragment extends BaseFragment {
 
     private static final String TAG = "SearchFragment";
     private static final String SAVED_NAMES = "saved_names";
@@ -51,9 +47,6 @@ public class SearchFragment extends Fragment {
     private RecyclerView mRecyclerView;
     private TextView mEmptyHint;
     private EditText mSearchField;
-
-    protected SpotifyApi mApi;
-    protected SpotifyService mSpotify;
 
     private ArtistAdapter mAdapter;
     private List<Artist> mArtistList;
@@ -86,10 +79,6 @@ public class SearchFragment extends Fragment {
         if (getArguments() != null) {
             restoreInstanceState(savedInstanceState);
         }
-
-        //Init spotify API
-        mApi = new SpotifyApi(Executors.newSingleThreadExecutor(), new MainThreadExecutor());
-        mSpotify = mApi.getService();
     }
 
     @Override

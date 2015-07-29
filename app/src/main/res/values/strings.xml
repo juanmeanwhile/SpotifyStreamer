@@ -15,4 +15,8 @@
 <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="title_activity_player">PlayerActivity</string>
+    <string name="media_prepare_error">We couldn\'t get the song :(</string>
+    <string name="player_time_loading">\??:??</string>
+    <string name="load_track_error">Error loading track!</string>
+    <string name="load_track_loading">Downloading track info</string>
 </resources>

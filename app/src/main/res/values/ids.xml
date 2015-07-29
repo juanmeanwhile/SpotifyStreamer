@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="media_prepare_error" type="id">Could not get the song :(</item>
+</resources>

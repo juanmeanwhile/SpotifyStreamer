@@ -8,5 +8,7 @@
     <dimen name="list_item_text_size">18dp</dimen>
     <dimen name="list_item_album_size">16dp</dimen>
     <dimen name="player_button_side">100dp</dimen>
-    <dimen name="player_image_side">300dp</dimen>
+    <dimen name="player_image_side">250dp</dimen>
+    <dimen name="player_time_width">50dp</dimen>
+    <dimen name="player_small_button_side">50dp</dimen>
 </resources>

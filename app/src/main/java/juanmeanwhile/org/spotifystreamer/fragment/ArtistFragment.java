@@ -1,8 +1,8 @@
 package juanmeanwhile.org.spotifystreamer.fragment;
 
 import android.app.Activity;
-import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -19,41 +19,32 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 import juanmeanwhile.org.spotifystreamer.DividerItemDecoration;
 import juanmeanwhile.org.spotifystreamer.PlayerActivity;
 import juanmeanwhile.org.spotifystreamer.R;
-import kaaes.spotify.webapi.android.SpotifyApi;
-import kaaes.spotify.webapi.android.SpotifyService;
-import kaaes.spotify.webapi.android.models.Album;
+import juanmeanwhile.org.spotifystreamer.data.ParcelableTrack;
 import kaaes.spotify.webapi.android.models.Artist;
-import kaaes.spotify.webapi.android.models.Image;
 import kaaes.spotify.webapi.android.models.Track;
 import kaaes.spotify.webapi.android.models.Tracks;
 import retrofit.Callback;
 import retrofit.RetrofitError;
-import retrofit.android.MainThreadExecutor;
 import retrofit.client.Response;
 
 /**
  * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link ArtistFragment.OnFragmentInteractionListener} interface
  * to handle interaction events.
  * Use the {@link ArtistFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class ArtistFragment extends Fragment {
+public class ArtistFragment extends BaseFragment {
 
 
     private static final String TAG = "ArtistActivity";
     private static final String ARG_ARTIST_ID = "artistId";
     private static final String ARG_ARTIST_NAME = "artistName";
 
-    private static final String SAVED_NAMES = "saved_names";
-    private static final String SAVED_IMGS = "saved_imgs";
-    private static final String SAVED_ALBUMS = "saved_albums";
+    private static final String SAVED_TRACKS = "saved_tracks";
 
     private static final String COUNTRY = "SE";
 
@@ -63,13 +54,9 @@ public class ArtistFragment extends Fragment {
     private TextView mEmptyHint;
     private TrackAdapter mAdapter;
 
-    protected SpotifyApi mApi;
-    protected SpotifyService mSpotify;
+
     private ArrayList<Track> mTrackList;
     private String mCurrentSearch = "";
-
-    private OnFragmentInteractionListener mListener;
-
 
     /**
      * Use this factory method to create a new instance of
@@ -106,10 +93,6 @@ public class ArtistFragment extends Fragment {
             restoreInstanceState(savedInstanceState);
 
         }
-
-        //Init spotify API
-        mApi = new SpotifyApi(Executors.newSingleThreadExecutor(), new MainThreadExecutor());
-        mSpotify = mApi.getService();
     }
 
     @Override
@@ -130,7 +113,11 @@ public class ArtistFragment extends Fragment {
         mEmptyHint = (TextView) v.findViewById(R.id.empty_hint);
         mEmptyHint.setVisibility(View.VISIBLE);
 
-        searchTracks(mArtistId);
+        if (mTrackList != null && mTrackList.size() > 0){
+            setResults(mTrackList);
+        } else {
+            searchTracks(mArtistId);
+        }
 
         return v;
     }
@@ -139,18 +126,18 @@ public class ArtistFragment extends Fragment {
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        try {
-            mListener = (OnFragmentInteractionListener) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
+//        try {
+//            mListener = (OnFragmentInteractionListener) activity;
+//        } catch (ClassCastException e) {
+//            throw new ClassCastException(activity.toString()
+//                    + " must implement OnFragmentInteractionListener");
+//        }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-        mListener = null;
+//        mListener = null;
     }
 
     private void searchTracks(String artistId) {
@@ -195,52 +182,22 @@ public class ArtistFragment extends Fragment {
         if (mTrackList == null)
             return;
 
-        //save name, id and image url as it is the only we need
-        ArrayList<String> names = new ArrayList<String>();
-        ArrayList<String> imgs = new ArrayList<String>();
-        ArrayList<String> albums = new ArrayList<String>();
-
+        ArrayList<ParcelableTrack> tracks = new ArrayList<ParcelableTrack>(mTrackList.size());
         for (Track track : mTrackList) {
-            names.add(track.name);
-            imgs.add(track.album.images.size()>0?track.album.images.get(0).url:null);
-            albums.add(track.album.name);
+            tracks.add(new ParcelableTrack(track));
         }
 
-        outState.putStringArrayList(SAVED_NAMES, names);
-        outState.putStringArrayList(SAVED_IMGS, imgs);
-        outState.putStringArrayList(SAVED_ALBUMS, albums);
+        outState.putParcelableArrayList(SAVED_TRACKS, tracks);
     }
 
     private void restoreInstanceState(Bundle savedInstanceState) {
-        ArrayList<String> names = savedInstanceState.getStringArrayList(SAVED_NAMES);
-        ArrayList<String> imgs = savedInstanceState.getStringArrayList(SAVED_IMGS);
-        ArrayList<String> albums = savedInstanceState.getStringArrayList(SAVED_ALBUMS);
-
-        if (names == null)
-            return;
 
         mTrackList = new ArrayList<Track>();
-        for (int i = 0; i < names.size(); i++) {
-            Track track = new Track();
-            track.name = names.get(i);
-
-            //Album
-            Album album = new Album();
-            album.name = albums.get(0);
-
-            //image
-            album.images = new ArrayList<Image>();
-            if (imgs.get(i) != null) {
-                Image image = new Image();
-                image.url = imgs.get(i);
-                album.images.add(image);
-            }
-            track.album = album;
-
-            mTrackList.add(track);
+        ArrayList<ParcelableTrack> pTracks =  savedInstanceState.getParcelableArrayList(SAVED_TRACKS);
+        if (pTracks != null ){
+            for (ParcelableTrack track : pTracks)
+                mTrackList.add(track);
         }
-
-        setResults(mTrackList);
     }
 
     public class TrackAdapter extends RecyclerView.Adapter<ViewHolder> {
@@ -249,7 +206,17 @@ public class ArtistFragment extends Fragment {
         private View.OnClickListener onClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startActivity(PlayerActivity.newIntent(getActivity(), (Track)view.getTag()));
+                if (getActivity().getSupportFragmentManager().getBackStackEntryCount() > 1) {
+                    //We are in a larger layout, display as Dialog
+                    ArrayList<String> topTen = new ArrayList<String>();
+                    for (Track t : mDataset) {
+                        topTen.add(t.id);
+                    }
+                    DialogFragment fr = PlayerFragment.newInstance(new ParcelableTrack((Track) view.getTag()), topTen);
+                    fr.show(getFragmentManager(), "dialog");
+                } else {
+                    startActivity(PlayerActivity.newIntent(getActivity(), (Track) view.getTag(), mDataset));
+                }
             }
         };
 
@@ -301,11 +268,6 @@ public class ArtistFragment extends Fragment {
             mAlbum = (TextView) v.findViewById(R.id.album);
             mPic = (ImageView) v.findViewById(R.id.pic);
         }
-    }
-
-
-    public interface OnFragmentInteractionListener {
-        public void onFragmentInteraction(Uri uri);
     }
 
 }
