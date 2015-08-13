@@ -1,28 +1,30 @@
 package juanmeanwhile.org.spotifystreamer.fragment;
 
-import android.media.AudioManager;
-import android.media.MediaPlayer;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Executors;
 
+import juanmeanwhile.org.spotifystreamer.PlayerService;
 import juanmeanwhile.org.spotifystreamer.R;
 import juanmeanwhile.org.spotifystreamer.Utils;
 import juanmeanwhile.org.spotifystreamer.data.ParcelableTrack;
@@ -46,17 +48,16 @@ public class PlayerFragment extends DialogFragment {
     private TextView mTrackName;
     private TextView mAlbum;
     private ImageView mPic;
-    private ProgressBar mProgress;
+    private SeekBar mSeekBar;
     private TextView mStartTime;
     private TextView mEndTime;
     private ImageButton mPrevButton;
     private ImageButton mPlayButton;
     private ImageButton mNextButton;
 
-    MediaPlayer mMediaPlayer;
-    Handler mHandler;
     private int mPlayingIndex = 0;
     private ParcelableTrack mTrack;
+    private boolean mIsPlaying = false;
 
     protected SpotifyApi mApi;
     protected SpotifyService mSpotify;
@@ -81,7 +82,6 @@ public class PlayerFragment extends DialogFragment {
     }
 
     public PlayerFragment() {
-        mHandler = new Handler();
     }
 
     @Override
@@ -128,7 +128,25 @@ public class PlayerFragment extends DialogFragment {
         mTrackName = (TextView) v.findViewById(R.id.title);
         mAlbum = (TextView) v.findViewById(R.id.album);
         mPic = (ImageView) v.findViewById(R.id.pic);
-        mProgress = (ProgressBar) v.findViewById(R.id.progress_bar);
+        mSeekBar = (SeekBar) v.findViewById(R.id.seek_bar);
+        mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    PlayerService.startService(getActivity(), PlayerService.Action.SEEK_TO, null, progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
         mStartTime = (TextView) v.findViewById(R.id.current_time);
         mEndTime = (TextView) v.findViewById(R.id.end_time);
 
@@ -162,6 +180,36 @@ public class PlayerFragment extends DialogFragment {
         return v;
     }
 
+    @Override
+    public void onStart(){
+        super.onStart();
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(PlayerService.BROADCAST_PLAYING);
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mUpdateReceiver, intentFilter );
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(mUpdateReceiver);
+    }
+
+    private BroadcastReceiver mUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int position = intent.getIntExtra(PlayerService.ARG_POSITION, 0);
+            int duration = intent.getIntExtra(PlayerService.ARG_DURATION, 0);
+
+            if (!mIsPlaying)
+                mediaPlayerPrepared(duration);
+
+            updateTime(position);
+
+        }
+    };
+
     private void loadTrack(String trackId) {
 
         if (mTopTenTracks.containsKey(trackId)){
@@ -170,10 +218,9 @@ public class PlayerFragment extends DialogFragment {
 
             loadSong(track.preview_url);
         } else {
-            //mark as loading
-            mProgress.setIndeterminate(true);
-            mEndTime.setText(R.string.player_time_loading);
-            mStartTime.setText(R.string.player_time_loading);
+            setControlsIndeterminate(true);
+
+            //mark text as loading
             mArtist.setText("...");
             mTrackName.setText(R.string.load_track_loading);
             mAlbum.setText("...");
@@ -205,58 +252,54 @@ public class PlayerFragment extends DialogFragment {
         }
     }
 
-    private void loadSong(String url){
-        mProgress.setIndeterminate(true);
-        mEndTime.setText(R.string.player_time_loading);
-        mStartTime.setText(R.string.player_time_loading);
+    private void setControlsIndeterminate(boolean indeterminate){
+        Log.d(TAG, "Setting controls to: " + indeterminate);
 
-        mMediaPlayer = new MediaPlayer();
-        mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mSeekBar.setIndeterminate(indeterminate);
+        mEndTime.setText(indeterminate ? getString(R.string.player_time_loading) : "00:00");
+        mStartTime.setText(indeterminate ? getString(R.string.player_time_loading) : "00:00");
 
-        mMediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mediaPlayer) {
-                Log.d(TAG, "onPrepared()");
-                mProgress.setIndeterminate(false);
-                mProgress.setMax(mMediaPlayer.getDuration());
-                mEndTime.setText(mMediaPlayer.getDuration() / 60000 + ":" + mMediaPlayer.getDuration() / 1000);
-                mPlayButton.setEnabled(true);
-
-                onPlayClick(null);
-            }
-        });
-
-        try {
-            mMediaPlayer.setDataSource(url);
-            mMediaPlayer.prepareAsync();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(getActivity(), R.string.media_prepare_error, Toast.LENGTH_LONG).show();
-        }
+        //mPlayButton.setEnabled(!indeterminate);
+        //mNextButton.setEnabled(!indeterminate);
+        //mPrevButton.setEnabled(!indeterminate);
     }
 
-    private Runnable mUpdateTimeTask = new Runnable() {
-        @Override
-        public void run() {
-            if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
-                long totalDuration = mMediaPlayer.getDuration();
-                long currentDuration = mMediaPlayer.getCurrentPosition();
 
-                // Displaying time completed playing
-                mStartTime.setText("" + Utils.milliSecondsToTimer(currentDuration));
 
-                // Updating progress bar
-                mProgress.setProgress((int) currentDuration);
+    private void loadSong(String url){
+        setControlsIndeterminate(true);
 
-                // Running this thread after 100 milliseconds
-                mHandler.postDelayed(this, 100);
-            }
-        }
-    };
+        //Send load song to service
+        Log.d(TAG, "Ask service to load a new song");
+        PlayerService.startService(getActivity(), PlayerService.Action.PLAY, url, 0);
+    }
+
+    private void mediaPlayerPrepared(int songDuration){
+        mIsPlaying = true;
+        mPlayButton.setImageResource(android.R.drawable.ic_media_pause);
+
+        setControlsIndeterminate(false);
+
+        mSeekBar.setMax(songDuration);
+        mEndTime.setText(songDuration / 60000 + ":" + songDuration / 1000);
+    }
+
+    private void updateTime(long currentTime) {
+
+        mIsPlaying = true;
+
+        // Displaying time completed playing
+        mStartTime.setText("" + Utils.milliSecondsToTimer(currentTime));
+
+        // Updating progress bar
+        mSeekBar.setProgress((int) currentTime);
+
+        if (mSeekBar.isIndeterminate())
+            mSeekBar.setIndeterminate(false);
+    }
 
     public void onPreviousClick(View v){
-        mMediaPlayer.stop();
+        mIsPlaying = false;
 
         if (mPlayingIndex > 0)
             mPlayingIndex--;
@@ -267,22 +310,26 @@ public class PlayerFragment extends DialogFragment {
     }
 
     public void onPlayClick(View v){
-        if ( mMediaPlayer.isPlaying()){
+        if ( mIsPlaying){
             //stop playing
             mPlayButton.setImageResource(android.R.drawable.ic_media_play);
-            mMediaPlayer.pause();
+
+            //send pause to service
+            PlayerService.startService(getActivity(), PlayerService.Action.PAUSE, null, 0);
+
+            mIsPlaying = false;
 
         } else {
             //resume playing
             mPlayButton.setImageResource(android.R.drawable.ic_media_pause);
-            mMediaPlayer.start();
 
-            mUpdateTimeTask.run();
+            //send resume to service
+            PlayerService.startService(getActivity(), PlayerService.Action.RESUME, null, 0);
         }
     }
 
     public void onNextClick(View v){
-        mMediaPlayer.stop();
+        mIsPlaying = false;
 
         if (mPlayingIndex < mTopTenTracksId.size())
             mPlayingIndex++;
@@ -305,9 +352,6 @@ public class PlayerFragment extends DialogFragment {
 
         if (mGetTask != null)
             mGetTask.cancel(true);
-
-        mMediaPlayer.release();
-        mMediaPlayer = null;
     }
 
     /**

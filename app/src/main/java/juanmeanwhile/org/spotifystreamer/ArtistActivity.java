@@ -7,11 +7,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.util.List;
+
 import juanmeanwhile.org.spotifystreamer.fragment.ArtistFragment;
 import kaaes.spotify.webapi.android.models.Artist;
+import kaaes.spotify.webapi.android.models.Track;
 
 
-public class ArtistActivity extends AppCompatActivity{
+public class ArtistActivity extends AppCompatActivity implements ArtistFragment.ArtistFragmentInteractionListener{
 
     private static final String TAG = "ArtistActivity";
     private static final String ARG_ARTIST_ID = "artistId";
@@ -76,5 +79,16 @@ public class ArtistActivity extends AppCompatActivity{
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onBackPressed(){
+        super.onBackPressed();
 
+        finish();
+    }
+
+
+    @Override
+    public void onTrackSelected(Track track, List<Track> topTenTracks) {
+        startActivity(PlayerActivity.newIntent(this, track, topTenTracks));
+    }
 }

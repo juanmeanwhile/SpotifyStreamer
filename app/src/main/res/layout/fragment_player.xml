@@ -49,6 +49,7 @@
             android:layout_width="@dimen/player_time_width"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
+            android:layout_marginTop="6dp"
             android:gravity="center"
             android:textAppearance="?android:attr/textAppearanceMedium"
             android:text="0:00"
@@ -62,6 +63,7 @@
             android:layout_width="@dimen/player_time_width"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
+            android:layout_marginTop="6dp"
             android:gravity="center"
             android:textAppearance="?android:attr/textAppearanceMedium"
             android:text="3:45"
@@ -71,15 +73,13 @@
             android:id="@+id/end_time"
             android:layout_gravity="center_horizontal"/>
 
-        <ProgressBar
-            style="?android:attr/progressBarStyleHorizontal"
+        <SeekBar
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:id="@+id/seek_bar"
+            android:layout_gravity="center_horizontal"
             android:layout_toLeftOf="@id/end_time"
-            android:layout_toRightOf="@id/current_time"
-            android:layout_margin="6dp"
-            android:id="@+id/progress_bar"
-            android:layout_gravity="center_horizontal"/>
+            android:layout_toRightOf="@id/current_time"/>
 
     </RelativeLayout>
 
