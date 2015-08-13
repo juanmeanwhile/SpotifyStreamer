@@ -1,16 +1,23 @@
 package juanmeanwhile.org.spotifystreamer;
 
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import juanmeanwhile.org.spotifystreamer.data.ParcelableTrack;
 import juanmeanwhile.org.spotifystreamer.fragment.ArtistFragment;
+import juanmeanwhile.org.spotifystreamer.fragment.PlayerFragment;
 import juanmeanwhile.org.spotifystreamer.fragment.SearchFragment;
 import kaaes.spotify.webapi.android.models.Artist;
+import kaaes.spotify.webapi.android.models.Track;
 
 
-public class MainActivity extends AppCompatActivity implements SearchFragment.OnSearchFragmentInteractonListener {
+public class MainActivity extends AppCompatActivity implements SearchFragment.OnSearchFragmentInteractonListener, ArtistFragment.ArtistFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
 
@@ -62,5 +69,16 @@ public class MainActivity extends AppCompatActivity implements SearchFragment.On
         } else {
             startActivity(ArtistActivity.newIntent(this, artist));
         }
+    }
+
+    @Override
+    public void onTrackSelected(Track track, List<Track> topTenTracks) {
+        //We are in a larger layout, display as Dialog
+        ArrayList<String> topTen = new ArrayList<String>();
+        for (Track t : topTenTracks) {
+            topTen.add(t.id);
+        }
+        DialogFragment fr = PlayerFragment.newInstance(new ParcelableTrack(track), topTen);
+        fr.show(getSupportFragmentManager(), "dialog");
     }
 }

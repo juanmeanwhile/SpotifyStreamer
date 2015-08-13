@@ -2,7 +2,6 @@ package juanmeanwhile.org.spotifystreamer.fragment;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 
 import juanmeanwhile.org.spotifystreamer.DividerItemDecoration;
-import juanmeanwhile.org.spotifystreamer.PlayerActivity;
 import juanmeanwhile.org.spotifystreamer.R;
 import juanmeanwhile.org.spotifystreamer.data.ParcelableTrack;
 import kaaes.spotify.webapi.android.models.Artist;
@@ -39,6 +37,9 @@ import retrofit.client.Response;
  */
 public class ArtistFragment extends BaseFragment {
 
+    public interface ArtistFragmentInteractionListener {
+        void onTrackSelected(Track track, List<Track> topTenTracks);
+    }
 
     private static final String TAG = "ArtistActivity";
     private static final String ARG_ARTIST_ID = "artistId";
@@ -53,6 +54,8 @@ public class ArtistFragment extends BaseFragment {
     private RecyclerView mRecyclerView;
     private TextView mEmptyHint;
     private TrackAdapter mAdapter;
+
+    private ArtistFragmentInteractionListener mListener;
 
 
     private ArrayList<Track> mTrackList;
@@ -126,18 +129,18 @@ public class ArtistFragment extends BaseFragment {
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-//        try {
-//            mListener = (OnFragmentInteractionListener) activity;
-//        } catch (ClassCastException e) {
-//            throw new ClassCastException(activity.toString()
-//                    + " must implement OnFragmentInteractionListener");
-//        }
+        try {
+            mListener = (ArtistFragmentInteractionListener) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString()
+                    + " must implement ArtistFragmentInteractionListener");
+        }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-//        mListener = null;
+        mListener = null;
     }
 
     private void searchTracks(String artistId) {
@@ -206,17 +209,7 @@ public class ArtistFragment extends BaseFragment {
         private View.OnClickListener onClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (getActivity().getSupportFragmentManager().getBackStackEntryCount() > 1) {
-                    //We are in a larger layout, display as Dialog
-                    ArrayList<String> topTen = new ArrayList<String>();
-                    for (Track t : mDataset) {
-                        topTen.add(t.id);
-                    }
-                    DialogFragment fr = PlayerFragment.newInstance(new ParcelableTrack((Track) view.getTag()), topTen);
-                    fr.show(getFragmentManager(), "dialog");
-                } else {
-                    startActivity(PlayerActivity.newIntent(getActivity(), (Track) view.getTag(), mDataset));
-                }
+                mListener.onTrackSelected((Track) view.getTag(), mDataset);
             }
         };
 
