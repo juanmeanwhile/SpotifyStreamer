@@ -17,7 +17,7 @@ import java.io.IOException;
 public class PlayerService extends Service implements MediaPlayer.OnPreparedListener {
 
     public enum Action {
-        PLAY, PAUSE, SEEK_TO, RESUME
+        PLAY, PAUSE, SEEK_TO, RESUME, STATUS
     }
 
     private static final String TAG = "PlayerService";
@@ -25,9 +25,9 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     private static final String ACTION_PAUSE = "pause";
     private static final String ACTION_SEEK_TO = "seekTo";
     private static final String ACTION_RESUME = "resume";
+    private static final String ACTION_STATUS = "status";
 
     public static final String BROADCAST_PLAYING = "playing";
-    public static final String BROADCAST_PREPARED = "prepared";
 
     //Used in startService
     private static final String ARG_URL = "url";
@@ -37,11 +37,19 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     //Used to broadcast
     public static final String ARG_DURATION = "duration";
+    public static final String ARG_IS_PLAYING = "isPlaying";
 
     private Handler mHandler;
     MediaPlayer mMediaPlayer;
     private boolean mPrepared = false;
 
+    /**
+     * Commincate with the Service indicating an action to be realized by the Service. Starts the service if needed
+     * @param context Application context
+     * @param action kind of action to be performed
+     * @param url Url of the tracks, only needed when requesting a play action
+     * @param trackPosition positon of the track in millis, required when requesting a seek to action
+     */
     public static void startService(Context context, Action action, String url, int trackPosition) {
         Intent intent = new Intent(context, PlayerService.class);
         switch (action){
@@ -58,6 +66,9 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
             case SEEK_TO:
                 intent.setAction(ACTION_SEEK_TO);
                 intent.putExtra(ARG_POSITION, trackPosition);
+                break;
+            case STATUS:
+                intent.setAction(ACTION_STATUS);
                 break;
         }
         context.startService(intent);
@@ -91,6 +102,16 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         }  else if (intent.getAction().equals(ACTION_SEEK_TO)) {
             int pos = intent.getIntExtra(ARG_POSITION, 0);
             mMediaPlayer.seekTo(pos);
+
+        } else if (intent.getAction().equals(ACTION_STATUS)) {
+            //send broadcast with status
+            Intent brIntent = new Intent();
+            brIntent.setAction(BROADCAST_PLAYING);
+            brIntent.putExtra(ARG_DURATION, mMediaPlayer.getDuration());
+            brIntent.putExtra(ARG_POSITION, mMediaPlayer.getCurrentPosition());
+            brIntent.putExtra(ARG_IS_PLAYING, mMediaPlayer.isPlaying());
+
+            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(brIntent);
         }
     }
 

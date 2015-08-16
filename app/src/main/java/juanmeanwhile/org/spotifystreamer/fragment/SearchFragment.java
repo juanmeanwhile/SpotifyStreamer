@@ -76,9 +76,7 @@ public class SearchFragment extends BaseFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            restoreInstanceState(savedInstanceState);
-        }
+
     }
 
     @Override
@@ -87,23 +85,6 @@ public class SearchFragment extends BaseFragment {
         View v = View.inflate(getActivity(), R.layout.fragment_search, null);
 
         mSearchField = (EditText) v.findViewById(R.id.search_field);
-        mSearchField.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                //Dont do anything
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if (charSequence.length() > 0)
-                    searchArtist(charSequence.toString());
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                //don't do anything
-            }
-        });
 
         mRecyclerView = (RecyclerView) v.findViewById(R.id.artist_list);
         mRecyclerView.setHasFixedSize(true);
@@ -116,6 +97,10 @@ public class SearchFragment extends BaseFragment {
         // specify an adapter (see also next example)
         mEmptyHint = (TextView) v.findViewById(R.id.empty_hint);
         mEmptyHint.setVisibility(View.GONE);
+
+        if (savedInstanceState != null) {
+            restoreInstanceState(savedInstanceState);
+        }
 
         return v;
     }
@@ -130,6 +115,30 @@ public class SearchFragment extends BaseFragment {
             throw new ClassCastException(activity.toString()
                     + " must implement OnSearchFragmentInteractionListener");
         }
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+
+        mSearchField.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                //Dont do anything
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if (charSequence.length() > 0 && !mCurrentSearch.equals(charSequence.toString()))
+                    searchArtist(charSequence.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                //don't do anything
+            }
+        });
+
     }
 
     @Override

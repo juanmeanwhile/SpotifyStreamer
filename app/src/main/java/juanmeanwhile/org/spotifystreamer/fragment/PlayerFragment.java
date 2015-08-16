@@ -44,6 +44,11 @@ public class PlayerFragment extends DialogFragment {
     private static final String ARG_TRACK= "track";
     private static final String ARG_TRACK_LIST = "tracks";
 
+    private static final String SAVED_TRACK = "track";
+    private static final String SAVED_POSITION = "track";
+    private static final String SAVED_PLAYING = "track";
+
+
     private TextView mArtist;
     private TextView mTrackName;
     private TextView mAlbum;
@@ -175,8 +180,19 @@ public class PlayerFragment extends DialogFragment {
         });
 
         setTrackData(mTrack);
-        loadSong(mTrack.preview_url);
 
+        //Listen to PlayerService events
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(PlayerService.BROADCAST_PLAYING);
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mUpdateReceiver, intentFilter);
+
+        if (savedInstanceState == null) {
+            loadSong(mTrack.preview_url);
+        } else {
+            //Recreating fragment. Service has been already started, so ask for status and adapt player status (playing or not)
+            //according to the result
+            PlayerService.startService(getActivity(), PlayerService.Action.STATUS, null, 0);
+        }
         return v;
     }
 
@@ -184,9 +200,7 @@ public class PlayerFragment extends DialogFragment {
     public void onStart(){
         super.onStart();
 
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(PlayerService.BROADCAST_PLAYING);
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mUpdateReceiver, intentFilter );
+
     }
 
     @Override
@@ -201,9 +215,9 @@ public class PlayerFragment extends DialogFragment {
         public void onReceive(Context context, Intent intent) {
             int position = intent.getIntExtra(PlayerService.ARG_POSITION, 0);
             int duration = intent.getIntExtra(PlayerService.ARG_DURATION, 0);
+            mIsPlaying = intent.getBooleanExtra(PlayerService.ARG_IS_PLAYING, true);
 
-            if (!mIsPlaying)
-                mediaPlayerPrepared(duration);
+            setControls(duration, mIsPlaying);
 
             updateTime(position);
 
@@ -252,6 +266,14 @@ public class PlayerFragment extends DialogFragment {
         }
     }
 
+    private void setControls(int duration, boolean playing){
+        setControlsIndeterminate(false);
+        mPlayButton.setImageResource(playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play);
+
+        mSeekBar.setMax(duration);
+        mEndTime.setText(duration / 60000 + ":" + duration / 1000);
+    }
+
     private void setControlsIndeterminate(boolean indeterminate){
         Log.d(TAG, "Setting controls to: " + indeterminate);
 
@@ -264,29 +286,7 @@ public class PlayerFragment extends DialogFragment {
         //mPrevButton.setEnabled(!indeterminate);
     }
 
-
-
-    private void loadSong(String url){
-        setControlsIndeterminate(true);
-
-        //Send load song to service
-        Log.d(TAG, "Ask service to load a new song");
-        PlayerService.startService(getActivity(), PlayerService.Action.PLAY, url, 0);
-    }
-
-    private void mediaPlayerPrepared(int songDuration){
-        mIsPlaying = true;
-        mPlayButton.setImageResource(android.R.drawable.ic_media_pause);
-
-        setControlsIndeterminate(false);
-
-        mSeekBar.setMax(songDuration);
-        mEndTime.setText(songDuration / 60000 + ":" + songDuration / 1000);
-    }
-
     private void updateTime(long currentTime) {
-
-        mIsPlaying = true;
 
         // Displaying time completed playing
         mStartTime.setText("" + Utils.milliSecondsToTimer(currentTime));
@@ -296,6 +296,15 @@ public class PlayerFragment extends DialogFragment {
 
         if (mSeekBar.isIndeterminate())
             mSeekBar.setIndeterminate(false);
+    }
+
+
+    private void loadSong(String url){
+        setControlsIndeterminate(true);
+
+        //Send load song to service
+        Log.d(TAG, "Ask service to load a new song");
+        PlayerService.startService(getActivity(), PlayerService.Action.PLAY, url, 0);
     }
 
     public void onPreviousClick(View v){
@@ -343,7 +352,7 @@ public class PlayerFragment extends DialogFragment {
     public void onSaveInstanceState (Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        outState.putParcelable(ARG_TRACK, mTrack);
+        outState.putParcelable(SAVED_TRACK, mTrack);
     }
 
     @Override
@@ -361,7 +370,13 @@ public class PlayerFragment extends DialogFragment {
 
         @Override
         protected Track doInBackground(String... strings) {
-            return mSpotify.getTrack(strings[0]);
+            try {
+                return mSpotify.getTrack(strings[0]);
+            } catch (Exception e) {
+                Log.d(TAG, "Exception: " + e.toString());
+            }
+
+            return null;
         }
 
         @Override

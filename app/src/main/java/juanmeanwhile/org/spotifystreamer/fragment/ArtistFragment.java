@@ -58,7 +58,7 @@ public class ArtistFragment extends BaseFragment {
     private ArtistFragmentInteractionListener mListener;
 
 
-    private ArrayList<Track> mTrackList;
+    private List<Track> mTrackList;
     private String mCurrentSearch = "";
 
     /**
@@ -94,8 +94,8 @@ public class ArtistFragment extends BaseFragment {
 
         if (savedInstanceState != null) {
             restoreInstanceState(savedInstanceState);
-
         }
+
     }
 
     @Override
@@ -167,6 +167,7 @@ public class ArtistFragment extends BaseFragment {
 
     private void setResults(List<Track> tracks) {
         if ((tracks == null || tracks.size() == 0)) {
+
             //show empty hint in case there is no returned results
             mEmptyHint.setVisibility(View.VISIBLE);
             mRecyclerView.setVisibility(View.GONE);
@@ -175,6 +176,8 @@ public class ArtistFragment extends BaseFragment {
             mRecyclerView.setVisibility(View.VISIBLE);
             mAdapter = new TrackAdapter(tracks);
             mRecyclerView.setAdapter(mAdapter);
+
+            mTrackList = tracks;
         }
     }
 
